@@ -12,12 +12,19 @@ import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.view.View;
+import android.widget.Toast;
 
 import org.osmdroid.api.IMapController;
 import org.osmdroid.config.Configuration;
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory;
 import org.osmdroid.util.GeoPoint;
 import org.osmdroid.views.MapView;
+import org.osmdroid.views.overlay.ItemizedIconOverlay;
+import org.osmdroid.views.overlay.ItemizedOverlayWithFocus;
+import org.osmdroid.views.overlay.Marker;
+import org.osmdroid.views.overlay.OverlayItem;
+
+import java.util.ArrayList;
 
 public class MainActivity extends AppCompatActivity {
     private final int REQ_ACESS_FINE_LOCATION = 0;
@@ -25,9 +32,14 @@ public class MainActivity extends AppCompatActivity {
     private final int REQ_ACCESS_NETWORK_STATE = 2;
     private final int REQ_WRITE_EXTERNAL_STORAGE = 3;
 
+    public MapView map = null;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+        Context ctx = getApplicationContext();
+        Configuration.getInstance().load(ctx, PreferenceManager.getDefaultSharedPreferences(ctx));
 
         getPermission(Manifest.permission.ACCESS_FINE_LOCATION, REQ_ACESS_FINE_LOCATION);
         getPermission(Manifest.permission.INTERNET, REQ_INTERNET);
@@ -42,10 +54,52 @@ public class MainActivity extends AppCompatActivity {
         fab.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
-                        .setAction("Action", null).show();
+
+
+
+                ArrayList<OverlayItem> items = new ArrayList<OverlayItem>();
+                items.add(new OverlayItem("Title", "Description", map.getMapCenter())); // Lat/Lon decimal degrees
+
+//the overlay
+                ItemizedOverlayWithFocus<OverlayItem> mOverlay = new ItemizedOverlayWithFocus<OverlayItem>(view.getContext(),
+                        items,
+                        new ItemizedIconOverlay.OnItemGestureListener<OverlayItem>() {
+                            @Override
+                            public boolean onItemSingleTapUp(final int index, final OverlayItem item) {
+                                //do something
+                                return true;
+                            }
+                            @Override
+                            public boolean onItemLongPress(final int index, final OverlayItem item) {
+                                return false;
+                            }
+                        });
+                mOverlay.setFocusItemsOnTap(true);
+
+                map.getOverlays().add(mOverlay);
+                map.invalidate();
+
             }
         });
+
+        handleMap();
+
+    }
+
+    public void handleMap() {
+
+        //inflate and create the map
+
+        map = findViewById(R.id.map);
+        map.setTileSource(TileSourceFactory.MAPNIK);
+        map.setBuiltInZoomControls(true);
+        map.setMultiTouchControls(true);
+
+
+        IMapController mapController = map.getController();
+        mapController.setZoom(17d);
+        GeoPoint startPoint = new GeoPoint(-15.775738, -47.882894);
+        mapController.setCenter(startPoint);
 
     }
 
@@ -86,28 +140,6 @@ public class MainActivity extends AppCompatActivity {
                 // If request is cancelled, the result arrays are empty.
                 if (grantResults.length > 0
                         && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-
-                    MapView map = null;
-                    Context ctx = getApplicationContext();
-                    Configuration.getInstance().load(ctx, PreferenceManager.getDefaultSharedPreferences(ctx));
-                    //setting this before the layout is inflated is a good idea
-                    //it 'should' ensure that the map has a writable location for the map cache, even without permissions
-                    //if no tiles are displayed, you can try overriding the cache path using Configuration.getInstance().setCachePath
-                    //see also StorageUtils
-                    //note, the load method also sets the HTTP User Agent to your application's package name, abusing osm's tile servers will get you banned based on this string
-
-                    //inflate and create the map
-                    setContentView(R.layout.activity_main);
-
-                    map = findViewById(R.id.map);
-                    map.setTileSource(TileSourceFactory.MAPNIK);
-                    map.setBuiltInZoomControls(true);
-                    map.setMultiTouchControls(true);
-
-                    IMapController mapController = map.getController();
-                    mapController.setZoom(9);
-                    GeoPoint startPoint = new GeoPoint(48.8583, 2.2944);
-                    mapController.setCenter(startPoint);
 
 
                 } else {
